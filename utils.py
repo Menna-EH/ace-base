@@ -37,6 +37,11 @@ def initialize_clients(api_provider):
         api_key = os.getenv('COMMONSTACK_API_KEY', '')
         if not api_key:
             raise ValueError("Commonstack api key not found in environment variables")
+    elif api_provider == "groq":
+        base_url = "https://api.groq.com/openai/v1"
+        api_key = os.getenv('GROQ_API_KEY', '')
+        if not api_key:
+            raise ValueError("Groq api key not found in environment variables")
     else:
         raise ValueError(
             f"Invalid api_provider name: {api_provider}. Must be 'sambanova', 'together', 'openai', or 'commonstack'"
