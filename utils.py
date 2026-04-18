@@ -14,11 +14,38 @@ load_dotenv()
 def initialize_clients(api_provider):
     """Initialize separate clients for generator, reflector, and curator"""
     if api_provider == "sambanova":
-        # Use SambaNova API
-        base_url = "https://api.sambanova.ai/v1"
-        api_key = os.getenv('SAMBANOVA_API_KEY', '')
-        if not api_key:
-            raise ValueError("SambaNova api key not found in environment variables")
+        import itertools
+        
+        # Collect all available keys
+        keys = []
+        for i in range(1, 10):
+            key = os.getenv(f'SAMBANOVA_API_KEY_{i}', '')
+            if key:
+                keys.append(key)
+        
+        # Also check plain SAMBANOVA_API_KEY
+        plain_key = os.getenv('SAMBANOVA_API_KEY', '')
+        if plain_key and plain_key not in keys:
+            keys.append(plain_key)
+        
+        if not keys:
+            raise ValueError("No SambaNova API keys found in environment variables")
+        
+        print(f"Found {len(keys)} SambaNova API key(s)")
+        key_cycle = itertools.cycle(keys)
+        
+        def make_sambanova_client():
+            return openai.OpenAI(
+                api_key=next(key_cycle),
+                base_url="https://api.sambanova.ai/v1"
+            )
+        
+        generator_client = make_sambanova_client()
+        reflector_client = make_sambanova_client()
+        curator_client = make_sambanova_client()
+        
+        print(f"Using sambanova API for all models")
+        return generator_client, reflector_client, curator_client
     elif api_provider == "together":
         # Use Together API
         base_url = "https://api.together.xyz/v1"
@@ -38,10 +65,37 @@ def initialize_clients(api_provider):
         if not api_key:
             raise ValueError("Commonstack api key not found in environment variables")
     elif api_provider == "groq":
-        base_url = "https://api.groq.com/openai/v1"
-        api_key = os.getenv('GROQ_API_KEY', '')
-        if not api_key:
-            raise ValueError("Groq api key not found in environment variables")
+        
+        # Collect all available keys
+        keys = []
+        for i in range(1, 10):  # supports up to 9 keys
+            key = os.getenv(f'GROQ_API_KEY_{i}', '')
+            if key:
+                keys.append(key)
+        
+        # Also check plain GROQ_API_KEY
+        plain_key = os.getenv('GROQ_API_KEY', '')
+        if plain_key:
+            keys.append(plain_key)
+        
+        if not keys:
+            raise ValueError("No Groq API keys found in environment variables")
+        
+        print(f"Found {len(keys)} Groq API key(s)")
+        key_cycle = itertools.cycle(keys)
+        
+        def make_groq_client():
+            return openai.OpenAI(
+                api_key=next(key_cycle),
+                base_url="https://api.groq.com/openai/v1"
+            )
+        
+        generator_client = make_groq_client()
+        reflector_client = make_groq_client()
+        curator_client = make_groq_client()
+        
+        print(f"Using groq API for all models")
+        return generator_client, reflector_client, curator_client
     else:
         raise ValueError(
             f"Invalid api_provider name: {api_provider}. Must be 'sambanova', 'together', 'openai', or 'commonstack'"

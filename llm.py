@@ -229,6 +229,45 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
                 if is_rate_limit:
                     error_type = "rate limited"
                     base_sleep = sleep_seconds * 2
+                    # Rotate to next Groq key if available
+                    if api_provider == "groq":
+                        import itertools, os, openai as _openai
+                        keys = []
+                        for i in range(1, 10):
+                            k = os.getenv(f'GROQ_API_KEY_{i}', '')
+                            if k:
+                                keys.append(k)
+                        plain = os.getenv('GROQ_API_KEY', '')
+                        if plain:
+                            keys.append(plain)
+                        if len(keys) > 1:
+                            if not hasattr(timed_llm_call, '_key_cycle'):
+                                timed_llm_call._key_cycle = itertools.cycle(keys)
+                            new_key = next(timed_llm_call._key_cycle)
+                            client = _openai.OpenAI(
+                                api_key=new_key,
+                                base_url="https://api.groq.com/openai/v1"
+                            )
+                            print(f"[{role.upper()}] Switched to next Groq API key")
+                    elif api_provider == "sambanova":
+                        import itertools, os, openai as _openai
+                        keys = []
+                        for i in range(1, 10):
+                            k = os.getenv(f'SAMBANOVA_API_KEY_{i}', '')
+                            if k:
+                                keys.append(k)
+                        plain = os.getenv('SAMBANOVA_API_KEY', '')
+                        if plain and plain not in keys:
+                            keys.append(plain)
+                        if len(keys) > 1:
+                            if not hasattr(timed_llm_call, '_samba_key_cycle'):
+                                timed_llm_call._samba_key_cycle = itertools.cycle(keys)
+                            new_key = next(timed_llm_call._samba_key_cycle)
+                            client = _openai.OpenAI(
+                                api_key=new_key,
+                                base_url="https://api.sambanova.ai/v1"
+                            )
+                            print(f"[{role.upper()}] Switched to next SambaNova API key")
                 elif is_server_error:
                     error_type = "server error (500+)"
                     base_sleep = sleep_seconds * 1.5  # Moderate delay for server errors
