@@ -65,7 +65,8 @@ def initialize_clients(api_provider):
         if not api_key:
             raise ValueError("Commonstack api key not found in environment variables")
     elif api_provider == "groq":
-        
+        import itertools
+
         # Collect all available keys
         keys = []
         for i in range(1, 10):  # supports up to 9 keys
