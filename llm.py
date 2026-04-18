@@ -106,6 +106,7 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
             }
             
             print(f"[{role.upper()}] Call {call_id} completed in {total_time:.2f}s")
+            time.sleep(4)  # pace calls to avoid rate limits
             
             if log_dir:
                 log_llm_call(log_dir, call_info)
