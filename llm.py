@@ -230,6 +230,8 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
             if (is_timeout or is_rate_limit or is_server_error or is_bad_json) and attempt < retries_on_timeout:
                 attempt += 1
                 if is_bad_json:
+                    error_type = "bad JSON response"
+                    base_sleep = 0
                     use_json_mode = True
                     prompt = prompt + "\n\nIMPORTANT: Your previous response was rejected because 'final_answer' contained an unevaluated expression. The 'final_answer' field must contain only a valid JSON value (a computed number, string, list, etc.). Never put a formula or code expression directly in 'final_answer' — evaluate it first and put only the result."
                     api_params["messages"] = [{"role": "user", "content": prompt}]
