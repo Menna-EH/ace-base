@@ -13,7 +13,7 @@ import json
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Any
 
-from .core import Generator, Reflector, Curator, BulletpointAnalyzer
+from .core import Generator, Reflector, Curator, BulletpointAnalyzer, HallucinationJudge
 from playbook_utils import *
 from logger import *
 from utils import *
@@ -39,7 +39,8 @@ class ACE:
         max_tokens: int = 4096,
         initial_playbook: Optional[str] = None,
         use_bulletpoint_analyzer: bool = False,
-        bulletpoint_analyzer_threshold: float = 0.90
+        bulletpoint_analyzer_threshold: float = 0.90, 
+        **kwargs
     ):
         """
         Initialize the ACE system.
@@ -61,7 +62,17 @@ class ACE:
         self.generator = Generator(generator_client, api_provider, generator_model, max_tokens)
         self.reflector = Reflector(reflector_client, api_provider, reflector_model, max_tokens)
         self.curator = Curator(curator_client, api_provider, curator_model, max_tokens)
-        
+        # Initialize Hallucination Judge
+        self.use_judge = kwargs.get('use_judge', False)
+        if self.use_judge:
+            self.judge = HallucinationJudge(
+                reflector_client,
+                api_provider,
+                reflector_model,
+                max_tokens=50)
+            print("🔍 Hallucination Judge enabled")
+        else:
+            self.judge = None
         # Initialize bulletpoint analyzer if requested and available
         self.use_bulletpoint_analyzer = use_bulletpoint_analyzer
         self.bulletpoint_analyzer_threshold = bulletpoint_analyzer_threshold
@@ -575,6 +586,19 @@ class ACE:
                            reflection_content=reflection_content,
                            is_correct=is_correct)
         
+        # STEP 2.5: Hallucination Judge — gate between Reflector and Curator
+        if self.judge and reflection_content != "(empty)":
+            should_pass, reason = self.judge.judge(
+                question=question,
+                context=context,
+                reflection_content=reflection_content,
+                call_id=f"{step_id}_judge",
+                log_dir=log_dir
+            )
+            if not should_pass:
+                print(f"🚫 [JUDGE] Reflection blocked — Curator will not update playbook this step")
+                reflection_content = "(empty)"
+
         # STEP 3: Curator - Periodically update playbook
         if step % curator_frequency == 0:
             print(f"\n--- Running Curator at step {step} ---")

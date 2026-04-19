@@ -17,6 +17,7 @@ Your output should be a json object, which contains the following fields:
 - reasoning: your chain of thought / reasoning / thinking process, detailed analysis and calculations
 - bullet_ids: each line in the playbook has a bullet_id. all bulletpoints in the playbook that's relevant, helpful for you to answer this question, you should include their bullet_id in this list
 - final_answer: your concise final answer
+- final_answer must be a valid JSON value (computed number, string, or list). Never put a formula or expression — always evaluate it first.
 
 
 **Playbook:**

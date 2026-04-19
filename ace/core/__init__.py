@@ -7,5 +7,6 @@ from .generator import Generator
 from .reflector import Reflector
 from .curator import Curator
 from .bulletpoint_analyzer import BulletpointAnalyzer, DEDUP_AVAILABLE
+from .judge import HallucinationJudge
 
 __all__ = ['Generator', 'Reflector', 'Curator', 'BulletpointAnalyzer', 'DEDUP_AVAILABLE']

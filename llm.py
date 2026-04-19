@@ -224,10 +224,17 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
                     incorrect_response = "INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE"
                     return incorrect_response, call_info
             
-            # Retry logic for timeouts, rate limits, and server errors
-            if (is_timeout or is_rate_limit or is_server_error) and attempt < retries_on_timeout:
+           # Retry logic for timeouts, rate limits, server errors, and bad JSON
+            is_bad_json = any(k in str(e).lower() for k in ["json_validate_failed", "failed to generate json"])
+            
+            if (is_timeout or is_rate_limit or is_server_error or is_bad_json) and attempt < retries_on_timeout:
                 attempt += 1
-                if is_rate_limit:
+                if is_bad_json:
+                    use_json_mode = True
+                    prompt = prompt + "\n\nIMPORTANT: Your previous response was rejected because 'final_answer' contained an unevaluated expression. The 'final_answer' field must contain only a valid JSON value (a computed number, string, list, etc.). Never put a formula or code expression directly in 'final_answer' — evaluate it first and put only the result."
+                    api_params["messages"] = [{"role": "user", "content": prompt}]
+                    print(f"[{role.upper()}] JSON validation failed, retrying with final_answer instruction...")
+                elif is_rate_limit:
                     error_type = "rate limited"
                     base_sleep = sleep_seconds * 2
                     # Rotate to next Groq key if available
