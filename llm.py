@@ -8,9 +8,27 @@ This file contains the LLM class for the project.
 """
 import time
 import random
+import itertools
+import os
 from datetime import datetime
 import openai
 from logger import log_llm_call, log_problematic_request
+
+def _build_key_cycle(provider: str):
+    keys = []
+    env_prefix = "GROQ_API_KEY" if provider == "groq" else "SAMBANOVA_API_KEY"
+    for i in range(1, 10):
+        k = os.getenv(f'{env_prefix}_{i}', '')
+        if k:
+            keys.append(k)
+    plain = os.getenv(env_prefix, '')
+    if plain and plain not in keys:
+        keys.append(plain)
+    print(f"[LLM] {provider} key pool size: {len(keys)}")
+    return itertools.cycle(keys) if keys else None
+
+_groq_key_cycle = _build_key_cycle("groq")
+_samba_key_cycle = _build_key_cycle("sambanova")
 
 def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_tokens=4096, log_dir=None,
                    sleep_seconds=15, retries_on_timeout=1000, attempt=1, use_json_mode=False):
